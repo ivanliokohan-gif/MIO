@@ -180,10 +180,23 @@ $("#voiceInput").addEventListener("keydown", (event) => {
   }
 });
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const isAppleMobile =
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function openKeyboardDictation() {
+  const input = $("#voiceInput");
+  input.focus();
+  input.scrollIntoView({ behavior: "smooth", block: "center" });
+  toast("Tocá el micrófono del teclado para dictar");
+}
+if (isAppleMobile || !SpeechRecognition) {
+  $("#voiceButton").textContent = "🎙 Dictar";
+  $("#voiceHelp").textContent =
+    "Tocá Dictar, usá el micrófono del teclado y después pulsá la flecha.";
+}
 $("#voiceButton").onclick = () => {
-  if (!SpeechRecognition) {
-    $("#voiceInput").focus();
-    toast("Usá el micrófono del teclado para dictar");
+  if (isAppleMobile || !SpeechRecognition) {
+    openKeyboardDictation();
     return;
   }
   const recognition = new SpeechRecognition();
