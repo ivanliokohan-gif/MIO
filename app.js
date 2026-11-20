@@ -2,6 +2,7 @@ import {
   createTask,
   formatTaskDate,
   localDateKey,
+  parseSpokenTask,
   parseShortcut,
   selectTasks,
   taskProgress,
@@ -79,6 +80,16 @@ function open(prefill = {}) {
   $("#taskTime").value = prefill.time || "";
   $("#taskPriority").value = prefill.priority || "normal";
   $("#taskDialog").showModal();
+}
+function processVoiceText() {
+  const input = $("#voiceInput");
+  const draft = parseSpokenTask(input.value);
+  if (!draft.title) {
+    toast("Decime qué tarea querés agregar");
+    input.focus();
+    return;
+  }
+  open(draft);
 }
 function toast(m, action) {
   const n = $("#toast");
@@ -160,6 +171,40 @@ $("#taskForm").onsubmit = () => {
   save();
   $("#taskDialog").close();
   toast("Tarea guardada");
+};
+$("#voiceProcess").onclick = processVoiceText;
+$("#voiceInput").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    processVoiceText();
+  }
+});
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+$("#voiceButton").onclick = () => {
+  if (!SpeechRecognition) {
+    $("#voiceInput").focus();
+    toast("Usá el micrófono del teclado para dictar");
+    return;
+  }
+  const recognition = new SpeechRecognition();
+  const button = $("#voiceButton");
+  recognition.lang = "es-ES";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = () => {
+    button.classList.add("listening");
+    button.textContent = "Escuchando…";
+  };
+  recognition.onend = () => {
+    button.classList.remove("listening");
+    button.textContent = "🎙 Hablar";
+  };
+  recognition.onerror = () => toast("No pude escuchar. Probá con el dictado del teclado");
+  recognition.onresult = (event) => {
+    $("#voiceInput").value = event.results[0][0].transcript;
+    processVoiceText();
+  };
+  recognition.start();
 };
 $("#closeDialog").onclick = () => $("#taskDialog").close();
 $("#settingsButton").onclick = () => (location.hash = "settings");

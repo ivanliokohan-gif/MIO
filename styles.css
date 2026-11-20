@@ -98,6 +98,65 @@ h1 {
   font-size: 17px;
   margin: 8px 0 26px;
 }
+.voice-card {
+  margin: 0 0 18px;
+  padding: 20px;
+  border: 1px solid #dce4dd;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #fffdf8, #edf3ed);
+  box-shadow: 0 8px 22px #304c3d12;
+}
+.voice-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.voice-heading h2 {
+  margin: 0;
+  font: 500 22px Georgia;
+}
+.voice-card > p {
+  margin: 12px 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.voice-card > small {
+  display: block;
+  margin-top: 9px;
+  color: var(--muted);
+}
+.voice-button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 15px;
+  background: var(--green);
+  color: white;
+  font-weight: 800;
+}
+.voice-button.listening {
+  animation: pulse 1s infinite alternate;
+  background: #9b574d;
+}
+@keyframes pulse { to { transform: scale(1.04); } }
+.voice-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.voice-input-row input {
+  min-width: 0;
+  font-size: 16px;
+}
+.voice-input-row button {
+  width: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--green);
+  color: white;
+  font-size: 24px;
+}
 .hero {
   padding: 24px;
   border-radius: 28px;

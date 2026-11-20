@@ -40,6 +40,120 @@ export function localDateKey(date = new Date()) {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+const SPOKEN_NUMBERS = {
+  una: 1,
+  uno: 1,
+  dos: 2,
+  tres: 3,
+  cuatro: 4,
+  cinco: 5,
+  seis: 6,
+  siete: 7,
+  ocho: 8,
+  nueve: 9,
+  diez: 10,
+  once: 11,
+  doce: 12,
+  trece: 13,
+  catorce: 14,
+  quince: 15,
+  dieciseis: 16,
+  diecisiete: 17,
+  dieciocho: 18,
+  diecinueve: 19,
+  veinte: 20,
+  veintiuna: 21,
+  veintiuno: 21,
+  veintidos: 22,
+  veintitres: 23,
+};
+const WEEKDAYS = { domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6 };
+const MONTHS = { enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5, julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11 };
+function spokenNormalize(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+function addLocalDays(date, days) {
+  const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  result.setDate(result.getDate() + days);
+  return result;
+}
+/** Convierte una frase breve en un borrador editable; nunca guarda sin confirmación. */
+export function parseSpokenTask(value, now = new Date()) {
+  const original = String(value || "").trim();
+  let working = spokenNormalize(original).replace(/\s+/g, " ").trim();
+  let date = "", time = "", priority = "normal";
+
+  const remove = (match) => { working = working.replace(match, " ").replace(/\s+/g, " ").trim(); };
+  if (/\b(urgente|importante|prioridad alta)\b/.test(working)) {
+    priority = "high";
+    remove(/\b(urgente|importante|prioridad alta)\b/g);
+  } else if (/\b(prioridad baja|cuando pueda)\b/.test(working)) {
+    priority = "low";
+    remove(/\b(prioridad baja|cuando pueda)\b/g);
+  }
+
+  if (/\bpasado manana\b/.test(working)) {
+    date = localDateKey(addLocalDays(now, 2));
+    remove(/\bpasado manana\b/g);
+  } else if (/\bmanana\b/.test(working)) {
+    date = localDateKey(addLocalDays(now, 1));
+    remove(/\bmanana\b/g);
+  } else if (/\bhoy\b/.test(working)) {
+    date = localDateKey(now);
+    remove(/\bhoy\b/g);
+  } else {
+    const numericDate = working.match(/\b(?:el\s+)?(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/);
+    const namedDate = working.match(/\b(?:el\s+)?(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/);
+    const weekday = working.match(/\b(?:el\s+)?(domingo|lunes|martes|miercoles|jueves|viernes|sabado)\b/);
+    if (numericDate) {
+      let year = numericDate[3] ? Number(numericDate[3]) : now.getFullYear();
+      if (year < 100) year += 2000;
+      const candidate = new Date(year, Number(numericDate[2]) - 1, Number(numericDate[1]));
+      if (candidate.getDate() === Number(numericDate[1]) && candidate.getMonth() === Number(numericDate[2]) - 1) date = localDateKey(candidate);
+      remove(numericDate[0]);
+    } else if (namedDate) {
+      let candidate = new Date(now.getFullYear(), MONTHS[namedDate[2]], Number(namedDate[1]));
+      if (candidate < addLocalDays(now, 0)) candidate = new Date(now.getFullYear() + 1, MONTHS[namedDate[2]], Number(namedDate[1]));
+      date = localDateKey(candidate);
+      remove(namedDate[0]);
+    } else if (weekday) {
+      let days = (WEEKDAYS[weekday[1]] - now.getDay() + 7) % 7;
+      if (days === 0) days = 7;
+      date = localDateKey(addLocalDays(now, days));
+      remove(weekday[0]);
+    }
+  }
+
+  const clock = working.match(/\b(?:a\s+la(?:s)?\s+)?(\d{1,2}|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciseis|diecisiete|dieciocho|diecinueve|veinte|veintiuna|veintiuno|veintidos|veintitres)(?::(\d{2})|\s+y\s+(media|cuarto))?(?:\s*(?:horas?|hs))?\b/);
+  if (clock && (/\ba\s+la/.test(clock[0]) || clock[0].includes(":") || /horas?|hs/.test(clock[0]))) {
+    const hour = /^\d+$/.test(clock[1]) ? Number(clock[1]) : SPOKEN_NUMBERS[clock[1]];
+    const minute = clock[2] ? Number(clock[2]) : clock[3] === "media" ? 30 : clock[3] === "cuarto" ? 15 : 0;
+    if (hour >= 0 && hour <= 23 && minute <= 59) time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    remove(clock[0]);
+  }
+
+  let title = original;
+  title = title.replace(/\b(urgente|importante|prioridad alta|prioridad baja|cuando pueda)\b/gi, " ");
+  if (date) {
+    title = title
+      .replace(/\b(pasado mañana|mañana|hoy)\b/gi, " ")
+      .replace(/\b(?:el\s+)?\d{1,2}[\/-]\d{1,2}(?:[\/-]\d{2,4})?\b/gi, " ")
+      .replace(/\b(?:el\s+)?\d{1,2}\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/gi, " ")
+      .replace(/\b(?:el\s+)?(domingo|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado)\b/gi, " ");
+  }
+  if (time) {
+    title = title
+      .replace(/\b(?:a\s+las?|a\s+la)\s+(?:\d{1,2}|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciséis|dieciseis|diecisiete|dieciocho|diecinueve|veinte|veintiuna|veintiuno|veintidós|veintidos|veintitrés|veintitres)(?::\d{2}|\s+y\s+(?:media|cuarto))?(?:\s*(?:horas?|hs))?\b/gi, " ")
+      .replace(/\b\d{1,2}:\d{2}(?:\s*(?:horas?|hs))?\b/gi, " ");
+  }
+  title = title
+    .replace(/^(recuérdame|recuerdame|recordame|agendar|agenda|anota|anotar|añade|anade|crear tarea|tengo que)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (title) title = title[0].toUpperCase() + title.slice(1);
+  return { title, date, time, priority, transcript: original };
+}
 export function formatTaskDate(date, time) {
   if (!date) return time || "";
   const today = localDateKey(),
