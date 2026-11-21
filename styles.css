@@ -279,6 +279,23 @@ h1 {
   color: #a4574c;
   font-size: 19px;
 }
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.calendar-link {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  text-decoration: none;
+  font-size: 18px;
+}
+.calendar-link:active {
+  background: #edf1eb;
+}
 .filters {
   display: flex;
   gap: 8px;

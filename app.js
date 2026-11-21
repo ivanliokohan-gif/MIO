@@ -1,6 +1,7 @@
 import {
   createTask,
   formatTaskDate,
+  googleCalendarUrl,
   localDateKey,
   parseSpokenTask,
   parseShortcut,
@@ -33,7 +34,14 @@ function markup(t) {
   const meta = [formatTaskDate(t.date, t.time), t.notes]
     .filter(Boolean)
     .join(" · ");
-  return `<article class="task ${t.done ? "done" : ""}"><input class="check" type="checkbox" data-toggle="${t.id}" ${t.done ? "checked" : ""}><div class="copy"><strong>${esc(t.title)}</strong>${meta ? `<small>${esc(meta)}</small>` : ""}</div><button class="delete" data-delete="${t.id}">×</button><span class="dot ${t.priority}"></span></article>`;
+  const calendarUrl = googleCalendarUrl(
+    t,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+  );
+  const calendar = calendarUrl
+    ? `<a class="calendar-link" href="${esc(calendarUrl)}" target="_blank" rel="noopener" aria-label="Añadir ${esc(t.title)} a Google Calendar" title="Añadir a Google Calendar">📅</a>`
+    : "";
+  return `<article class="task ${t.done ? "done" : ""}"><input class="check" type="checkbox" data-toggle="${t.id}" ${t.done ? "checked" : ""}><div class="copy"><strong>${esc(t.title)}</strong>${meta ? `<small>${esc(meta)}</small>` : ""}</div><div class="task-actions">${calendar}<button class="delete" data-delete="${t.id}" aria-label="Eliminar ${esc(t.title)}">×</button></div><span class="dot ${t.priority}"></span></article>`;
 }
 function list(el, ts, msg) {
   el.innerHTML = ts.length

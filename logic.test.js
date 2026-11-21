@@ -15,6 +15,7 @@ import {
   buildImportPreview,
   IMPORT_LIMITS,
   parseSpokenTask,
+  googleCalendarUrl,
 } from "./logic.js";
 test("crea tarea", () =>
   assert.equal(
@@ -200,4 +201,27 @@ test("interpreta día de semana y conserva acentos", () => {
   );
   assert.equal(draft.title, "Comprar café");
   assert.equal(draft.date, "2026-11-23");
+});
+test("crea enlace de Google Calendar para tarea con hora", () => {
+  const url = new URL(
+    googleCalendarUrl(
+      {
+        title: "Llamar al médico",
+        date: "2026-11-24",
+        time: "10:30",
+        notes: "Pedir turno",
+      },
+      "Europe/Madrid",
+    ),
+  );
+  assert.equal(url.origin, "https://calendar.google.com");
+  assert.equal(url.searchParams.get("text"), "Llamar al médico");
+  assert.equal(url.searchParams.get("dates"), "20261124T103000/20261124T113000");
+  assert.equal(url.searchParams.get("ctz"), "Europe/Madrid");
+  assert.match(url.searchParams.get("details"), /Pedir turno/);
+});
+test("crea evento de día completo y rechaza tareas sin fecha", () => {
+  const url = new URL(googleCalendarUrl({ title: "Comprar pan", date: "2026-11-24" }));
+  assert.equal(url.searchParams.get("dates"), "20261124/20261125");
+  assert.equal(googleCalendarUrl({ title: "Sin fecha", date: "" }), "");
 });

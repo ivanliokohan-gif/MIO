@@ -40,6 +40,34 @@ export function localDateKey(date = new Date()) {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+function compactCalendarDate(date) {
+  return localDateKey(date).replaceAll("-", "");
+}
+/** Genera un enlace de creación; Google muestra la pantalla de confirmación. */
+export function googleCalendarUrl(task, timezone = "") {
+  if (!task?.title || !isValidDate(task.date || "")) return "";
+  let start, end;
+  if (task.time && isValidTime(task.time)) {
+    const startDate = new Date(`${task.date}T${task.time}:00`);
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+    const timePart = (date) =>
+      `${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}00`;
+    start = `${compactCalendarDate(startDate)}T${timePart(startDate)}`;
+    end = `${compactCalendarDate(endDate)}T${timePart(endDate)}`;
+  } else {
+    const startDate = new Date(`${task.date}T12:00:00`);
+    start = compactCalendarDate(startDate);
+    end = compactCalendarDate(addLocalDays(startDate, 1));
+  }
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: task.title,
+    dates: `${start}/${end}`,
+    details: [task.notes, "Creado desde MIO"].filter(Boolean).join("\n\n"),
+  });
+  if (timezone) params.set("ctz", timezone);
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
 
 const SPOKEN_NUMBERS = {
   una: 1,
