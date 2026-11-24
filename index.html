@@ -28,6 +28,16 @@
         <p class="eyebrow" id="fullDate"></p>
         <h1 id="greeting">Hola</h1>
         <p class="intro">Un lugar tranquilo para todo lo que importa.</p>
+        <article class="voice-card" aria-labelledby="englishTitle">
+          <p class="eyebrow">PRACTICÁ INGLÉS</p>
+          <h2 id="englishTitle">Let’s talk</h2>
+          <p>Escribí o usá el micrófono del teclado. MIO responde y te ayuda a mejorar.</p>
+          <label>Tu clave de acceso personal <input id="englishAccess" type="password" autocomplete="off" placeholder="Ingresá tu clave de acceso" /></label>
+          <div id="englishMessages" role="log" aria-live="polite"></div>
+          <form id="englishForm"><label>Tu mensaje <textarea id="englishInput" rows="2" maxlength="2000" required placeholder="Hello! How are you?"></textarea></label><button class="primary" id="englishSend">Enviar</button></form>
+          <button type="button" id="englishClear">Nueva conversación</button>
+          <p id="englishStatus" role="status"></p>
+        </article>
       <article class="voice-card" aria-labelledby="voiceTitle">
         <div class="voice-heading">
           <div>

@@ -9,6 +9,7 @@ import {
   taskProgress,
 } from "./logic.js";
 import { initImporter } from "./importer.js";
+import { initEnglish } from "./english.js";
 const KEY = "mio.tasks.v1",
   $ = (s) => document.querySelector(s);
 let tasks = load(),
@@ -316,6 +317,7 @@ initImporter({
   },
   toast,
 });
+initEnglish();
 updateNotificationButton();
 navigate();
 render();
