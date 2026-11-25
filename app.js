@@ -1,5 +1,6 @@
 import {
   createTask,
+  exportBackup,
   formatTaskDate,
   googleCalendarUrl,
   localDateKey,
@@ -279,6 +280,22 @@ $("#copySiriUrl").onclick = async () => {
 $("#clearCompleted").onclick = () => {
   tasks = tasks.filter((t) => !t.done);
   save();
+};
+$("#exportBackup").onclick = () => {
+  try {
+    const blob = new Blob([exportBackup(tasks)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `mio-copia-${today()}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    toast("Copia preparada para guardar");
+  } catch {
+    toast("No se pudo crear la copia");
+  }
 };
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();

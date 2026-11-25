@@ -298,6 +298,10 @@ export function validateImportEntry(raw) {
         errors,
       };
 }
+export function exportBackup(tasks, now = new Date()) {
+  if (!Array.isArray(tasks)) throw new Error("No se pudieron leer las tareas");
+  return JSON.stringify({ format: "mio-backup", version: 1, exportedAt: now.toISOString(), tasks }, null, 2);
+}
 /** Texto: una tarea por línea "Título | AAAA-MM-DD | prioridad | notas". Ignora líneas vacías y las que empiezan con #. */
 export function parseTextImport(text) {
   const out = [];
@@ -338,7 +342,8 @@ export function parseJsonImport(text) {
     throw new Error(
       `Versión ${String(data.version)} no compatible (se espera 1)`,
     );
-  return list.map((raw, i) => ({ source: `Tarea ${i + 1}`, raw }));
+  const backup = !Array.isArray(data) && data.format === "mio-backup";
+  return list.map((raw, i) => ({ source: `Tarea ${i + 1}`, raw, backup }));
 }
 /** Detecta el formato: JSON si empieza con { o [. */
 export function parseImport(text) {
@@ -346,7 +351,7 @@ export function parseImport(text) {
     .replace(/^\uFEFF/, "")
     .trim();
   const entries = /^[\[{]/.test(t) ? parseJsonImport(t) : parseTextImport(t);
-  if (entries.length > IMPORT_LIMITS.maxTasks)
+  if (entries.length > IMPORT_LIMITS.maxTasks && !entries.every((entry) => entry.backup))
     throw new Error(
       `Demasiadas tareas (máximo ${IMPORT_LIMITS.maxTasks} por importación)`,
     );
@@ -355,13 +360,17 @@ export function parseImport(text) {
 /** Vista previa: cada elemento {source, task, errors, status:"ok"|"duplicate"|"invalid", selected}. Duplicado = mismo título (sin acentos/mayúsculas), fecha y hora que una tarea existente o una anterior del lote. */
 export function buildImportPreview(entries, existing = []) {
   const seen = new Set(existing.map(taskKey));
-  return entries.map(({ source, raw }) => {
-    const { task, errors } = validateImportEntry(raw);
-    if (!task)
+  const ids = new Set(existing.map((task) => task.id));
+  return entries.map(({ source, raw, backup }) => {
+    const { task, errors } = backup
+      ? validateBackupTask(raw)
+      : validateImportEntry(raw);
+    if (!task || errors.length)
       return { source, task: null, errors, status: "invalid", selected: false };
     const k = taskKey(task),
-      dup = seen.has(k);
+      dup = backup ? ids.has(task.id) : seen.has(k);
     seen.add(k);
+    if (backup) ids.add(task.id);
     return {
       source,
       task,
@@ -370,4 +379,22 @@ export function buildImportPreview(entries, existing = []) {
       selected: !dup,
     };
   });
+}
+function validateBackupTask(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) ||
+      typeof raw.title !== "string" || typeof raw.date !== "string" ||
+      typeof raw.time !== "string" || !["low", "normal", "high"].includes(raw.priority) ||
+      typeof raw.notes !== "string" || typeof raw.done !== "boolean" ||
+      typeof raw.id !== "string" || !/^[\w.-]{1,200}$/.test(raw.id) || typeof raw.createdAt !== "number" || !Number.isFinite(raw.createdAt)) {
+    return { task: null, errors: ["Tarea de copia inválida"] };
+  }
+  return { task: { ...raw }, errors: [] };
+}
+export function restoreImportedTask(task, now = Date.now()) {
+  if (typeof task.done === "boolean" && typeof task.id === "string" && typeof task.createdAt === "number") return { ...task };
+  const result = createTask(task, now);
+  if (typeof task.done === "boolean") result.done = task.done;
+  if (typeof task.id === "string") result.id = task.id;
+  if (typeof task.createdAt === "number") result.createdAt = task.createdAt;
+  return result;
 }

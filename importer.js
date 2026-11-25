@@ -1,4 +1,4 @@
-import{IMPORT_LIMITS,buildImportPreview,createTask,parseImport}from"./logic.js";
+import{IMPORT_LIMITS,buildImportPreview,restoreImportedTask,parseImport}from"./logic.js";
 const $=s=>document.querySelector(s),PRIO={high:"Importante",normal:"Normal",low:"Cuando pueda"};
 const LABEL={ok:"",duplicate:"Posible duplicado",invalid:"Con errores"};
 let preview=[];
@@ -15,7 +15,7 @@ $("#openImport").onclick=()=>{reset();dlg.showModal()};
 $("#closeImport").onclick=()=>dlg.close();
 $("#importAnalyze").onclick=()=>analyze(area.value,getTasks);
 $("#importBack").onclick=()=>{showStep("input");setError("")};
-file.onchange=async()=>{const f=file.files&&file.files[0];if(!f)return;if(f.size>IMPORT_LIMITS.maxBytes){setError("El archivo es demasiado grande (máximo 1 MB).");file.value="";return}try{analyze(await f.text(),getTasks)}catch{setError("No pude leer el archivo.")}file.value=""};
+file.onchange=async()=>{const f=file.files&&file.files[0];if(!f)return;if(f.size>20*IMPORT_LIMITS.maxBytes){setError("El archivo es demasiado grande (máximo 20 MB).");file.value="";return}try{analyze(await f.text(),getTasks)}catch{setError("No pude leer el archivo.")}file.value=""};
 $("#importAll").onclick=()=>{preview.forEach(p=>{if(p.status!=="invalid")p.selected=true});renderPreview()};
 $("#importNone").onclick=()=>{preview.forEach(p=>p.selected=false);renderPreview()};
-$("#importConfirm").onclick=()=>{const chosen=preview.filter(p=>p.selected),now=Date.now();if(!chosen.length)return;const made=chosen.map((p,i)=>createTask(p.task,now+i));addTasks(made);dlg.close();toast(`${made.length} ${made.length===1?"tarea importada":"tareas importadas"}`)}}
+$("#importConfirm").onclick=()=>{const chosen=preview.filter(p=>p.selected),now=Date.now();if(!chosen.length)return;const existingIds=new Set(getTasks().map(t=>t.id));const made=chosen.map((p,i)=>{const task=restoreImportedTask(p.task,now+i);if(existingIds.has(task.id))task.id=globalThis.crypto?.randomUUID?.()||`${now+i}-${Math.random()}`;existingIds.add(task.id);return task});addTasks(made);dlg.close();toast(`${made.length} ${made.length===1?"tarea importada":"tareas importadas"}`)}}

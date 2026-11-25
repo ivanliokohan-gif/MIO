@@ -225,3 +225,16 @@ test("crea evento de día completo y rechaza tareas sin fecha", () => {
   assert.equal(url.searchParams.get("dates"), "20261124/20261125");
   assert.equal(googleCalendarUrl({ title: "Sin fecha", date: "" }), "");
 });
+test("la copia restaura tareas pendientes y hechas sin alterar los originales", async () => {
+  const { exportBackup, parseImport, buildImportPreview, restoreImportedTask } = await import("./logic.js");
+  const tasks = [
+    { id: "a", title: "Tarea", date: "2026-11-25", time: "09:00", priority: "high", notes: "Nota", done: false, createdAt: 100 },
+    { id: "b", title: "Tarea", date: "2026-11-25", time: "09:00", priority: "low", notes: "Otra", done: true, createdAt: 200 },
+  ];
+  const before = structuredClone(tasks);
+  const preview = buildImportPreview(parseImport(exportBackup(tasks)), []);
+  assert.deepEqual(preview.map((item) => item.status), ["ok", "ok"]);
+  assert.deepEqual(preview.map((item) => restoreImportedTask(item.task)), tasks);
+  assert.deepEqual(tasks, before);
+  assert.equal(buildImportPreview(parseImport(exportBackup(tasks)), tasks)[0].status, "duplicate");
+});
